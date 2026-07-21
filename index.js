@@ -6,7 +6,7 @@ const { addonBuilder, getRouter } = sdk;
 const manifest = {
     id: "community.resolution-filter",
     version: "1.0.0",
-    name: "⚡ Filtro de Resolução",
+    name: "! Filtro de Resolução",
     description: "Filtra streams do Stremio por resoluções específicas (4K, 1080p, 720p, 480p) e consolida múltiplas fontes dinâmicas.",
     resources: ["stream"],
     types: ["movie", "series"],
@@ -65,11 +65,11 @@ const RESOLUTION_PRIORITY = {
  * Obtém o selo conciso da resolução selecionada para exibição limpa no Stremio.
  */
 function getResolutionLabel(resolutionKey) {
-    if (!resolutionKey) return "Todas";
+    if (!resolutionKey) return "Todas as Resoluções";
     const res = resolutionKey.toLowerCase();
 
     if (res.includes("4k") && !res.includes("1080p") && !res.includes("720p") && !res.includes("all") && !res.includes("todas")) {
-        return "4K Apenas";
+        return "1080p Apenas";
     }
     if (res.includes("1080p") && !res.includes("4k") && !res.includes("720p") && !res.includes("all") && !res.includes("todas")) {
         return "1080p Apenas";
@@ -81,13 +81,13 @@ function getResolutionLabel(resolutionKey) {
         return "480p Apenas";
     }
     if (res.includes("1080p_above") || res.includes("full hd & 4k") || res.includes("full hd + 4k")) {
-        return "1080p + 4K";
+        return "1080p e 4K";
     }
     if (res.includes("720p_above") || res.includes("720p ou superior")) {
-        return "720p+";
+        return "720p ou superior";
     }
 
-    return "Todas";
+    return "Todas as Resoluções";
 }
 
 /**
@@ -122,16 +122,16 @@ function detectResolution(stream) {
 }
 
 /**
- * Extrai e formata o nome da fonte para o Stremio agrupar no menu dropdown superior no topo da lista.
+ * Extrai e formata o nome da fonte para o Stremio agrupar no 1º LUGAR da lista do menu dropdown superior.
  */
 function formatStreamName(stream, resolution, config) {
     const rawName = (stream.name || "").trim();
     const parts = rawName.split("\n");
-    const sourceName = parts[0] || "Torrentio";
     const displayRes = resolution !== "unknown" ? resolution.toUpperCase() : (parts[1] || "");
 
     const label = getResolutionLabel(config?.resolution);
-    const headerName = label !== "Todas" ? `⚡ ${sourceName} [${label}]` : `⚡ ${sourceName}`;
+    // Prefixo '!' (ASCII 33) garante que seja ordenado em 1º lugar absoluto no menu do Stremio
+    const headerName = `! Filtro (${label})`;
 
     return displayRes ? `${headerName}\n${displayRes}` : headerName;
 }
@@ -328,7 +328,7 @@ const configureHTML = `<!DOCTYPE html>
         .grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 28px;;
+            gap: 28px;
         }
         @media (max-width: 850px) {
             .grid { grid-template-columns: 1fr; }
@@ -432,7 +432,6 @@ const configureHTML = `<!DOCTYPE html>
         }
         .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
         
-        /* Step Guide Styles */
         .step-list {
             display: flex;
             flex-direction: column;
@@ -499,16 +498,15 @@ const configureHTML = `<!DOCTYPE html>
     <div class="wrapper">
         <div class="hero">
             <h1 class="hero-title">🎬 Stremio Resolution Filter</h1>
-            <p class="hero-subtitle">Filtre os links de vídeo por qualidade e consolide múltiplas fontes de torrents diretamente na sua tela do Stremio.</p>
+            <p class="hero-subtitle">Filtre os links de vídeo por qualidade e consolide múltiplas fontes de torrents no topo da sua lista do Stremio.</p>
             <div class="badges">
-                <span class="badge">⚡ 1º Lugar no Menu</span>
+                <span class="badge">🥇 1º Lugar no Menu</span>
                 <span class="badge">☁️ Hospedado na Nuvem</span>
                 <span class="badge">📺 TV, Mobile e Desktop</span>
             </div>
         </div>
 
         <div class="grid">
-            <!-- Coluna 1: Painel de Configuração -->
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">⚙️</div>
@@ -541,7 +539,6 @@ const configureHTML = `<!DOCTYPE html>
                 </form>
             </div>
 
-            <!-- Coluna 2: Guia de Uso Visual -->
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">📖</div>
@@ -576,8 +573,8 @@ const configureHTML = `<!DOCTYPE html>
                     <div class="step-item">
                         <div class="step-number">4</div>
                         <div class="step-text">
-                            <h4>Veja o Filtro no Topo (⚡)</h4>
-                            <p>No menu suspenso do canto superior direito do Stremio, o seu filtro aparecerá em <span class="highlight">1º lugar com o raio ⚡</span> exibindo apenas os vídeos filtrados!</p>
+                            <h4>Veja o Filtro no 1º Lugar da Lista</h4>
+                            <p>No menu suspenso do canto superior direito do Stremio, o seu filtro aparecerá no <span class="highlight">1º LUGAR da lista com o caractere '!'</span> exibindo os vídeos filtrados!</p>
                         </div>
                     </div>
                 </div>
@@ -644,14 +641,14 @@ app.use((req, res, next) => {
     next();
 });
 
-// Rota customizada para entregar o manifesto dinâmico com prioridade ⚡ e descrição no nome
+// Rota customizada para entregar o manifesto dinâmico ordenado em 1º LUGAR no menu do Stremio
 app.get("/:config/manifest.json", (req, res, next) => {
     try {
         const config = JSON.parse(req.params.config);
         const resLabel = getResolutionLabel(config.resolution);
         const dynamicManifest = {
             ...manifest,
-            name: `⚡ Filtro (${resLabel})`
+            name: `! Filtro (${resLabel})`
         };
         if (dynamicManifest.behaviorHints) {
             delete dynamicManifest.behaviorHints.configurable;
