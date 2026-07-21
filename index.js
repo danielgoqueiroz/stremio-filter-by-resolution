@@ -51,7 +51,7 @@ const DEFAULT_UPSTREAMS = [
 ];
 
 /**
- * Ordem de prioridade para exibição dos streams no Stremio (4K no topo, depois 1080p, 720p, 480p)
+ * Ordem de prioridade para exibição dos streams no Stremio
  */
 const RESOLUTION_PRIORITY = {
     "4k": 1,
@@ -131,7 +131,6 @@ function formatStreamName(stream, resolution, config) {
     const displayRes = resolution !== "unknown" ? resolution.toUpperCase() : (parts[1] || "");
 
     const label = getResolutionLabel(config?.resolution);
-    // Prefixo ⚡ garante prioridade no topo do dropdown do Stremio
     const headerName = label !== "Todas" ? `⚡ ${sourceName} [${label}]` : `⚡ ${sourceName}`;
 
     return displayRes ? `${headerName}\n${displayRes}` : headerName;
@@ -254,7 +253,6 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
         filteredStreams.push(formattedStream);
     }
 
-    // Ordena os streams para que as resoluções mais altas apareçam em primeiro lugar na lista do Stremio
     filteredStreams.sort((a, b) => {
         const resA = detectResolution(a);
         const resB = detectResolution(b);
@@ -266,47 +264,129 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
     return { streams: filteredStreams };
 });
 
-// HTML customizado e moderno para a página de configuração /configure
+// HTML moderno, responsivo e com guia visual incrível para o /configure
 const configureHTML = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuração - Filtro de Resolução Stremio</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Stremio Resolution Filter - Configuração & Guia de Uso</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0f0c20 0%, #1a103c 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(circle at 50% 0%, #201040 0%, #0b0817 100%);
             color: #ffffff;
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 30px 15px;
+            overflow-x: hidden;
         }
-        .container {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 40px;
+        .wrapper {
             width: 100%;
-            max-width: 540px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            max-width: 1050px;
         }
-        .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { font-size: 26px; font-weight: 700; color: #ffffff; margin-bottom: 8px; }
-        .header p { font-size: 14px; color: #a0a0c0; }
-        .form-group { margin-bottom: 24px; }
-        label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #d0d0f0; }
+        .hero {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+        .hero-title {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, #c499f8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+        .hero-subtitle {
+            font-size: 16px;
+            color: #a4a4cf;
+            max-width: 620px;
+            margin: 0 auto 20px auto;
+            line-height: 1.6;
+        }
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .badge {
+            background: rgba(138, 90, 171, 0.15);
+            border: 1px solid rgba(138, 90, 171, 0.3);
+            color: #d6b4fc;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;;
+        }
+        @media (max-width: 850px) {
+            .grid { grid-template-columns: 1fr; }
+            .hero-title { font-size: 28px; }
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 16px;
+        }
+        .card-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #8A5AAB 0%, #5d2882 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 15px rgba(138, 90, 171, 0.4);
+        }
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .form-group {
+            margin-bottom: 22px;
+        }
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #d8d8f0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
         select, textarea {
             width: 100%;
-            padding: 12px 16px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 14px 16px;
+            background: rgba(0, 0, 0, 0.35);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
+            border-radius: 10px;
             color: #ffffff;
             font-size: 14px;
             outline: none;
@@ -314,65 +394,207 @@ const configureHTML = `<!DOCTYPE html>
         }
         select:focus, textarea:focus {
             border-color: #8A5AAB;
-            box-shadow: 0 0 10px rgba(138, 90, 171, 0.3);
+            box-shadow: 0 0 14px rgba(138, 90, 171, 0.4);
         }
-        select option { background: #1a103c; color: #fff; }
-        textarea { resize: vertical; min-height: 90px; font-family: monospace; font-size: 12px; line-height: 1.5; }
-        .hint { font-size: 12px; color: #8080a0; margin-top: 6px; }
-        button {
+        select option { background: #160e2e; color: #fff; }
+        textarea { resize: vertical; min-height: 95px; font-family: monospace; font-size: 12px; line-height: 1.5; }
+        .hint { font-size: 12px; color: #8a8ab0; margin-top: 6px; }
+        .btn-primary {
             width: 100%;
-            padding: 14px;
+            padding: 16px;
             background: linear-gradient(135deg, #8A5AAB 0%, #6c3483 100%);
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             color: #ffffff;
             font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(138, 90, 171, 0.45);
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(138, 90, 171, 0.65);
+        }
+        .btn-secondary {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            color: #d8b4fc;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 8px 20px rgba(138, 90, 171, 0.4);
-            transition: transform 0.1s ease, box-shadow 0.2s ease;
+            margin-top: 10px;
+            transition: all 0.2s ease;
         }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 25px rgba(138, 90, 171, 0.6);
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
+        
+        /* Step Guide Styles */
+        .step-list {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
         }
-        button:active { transform: translateY(0); }
+        .step-item {
+            display: flex;
+            gap: 16px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 14px;
+            border-radius: 12px;
+            align-items: flex-start;
+        }
+        .step-number {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            background: rgba(138, 90, 171, 0.25);
+            border: 1px solid #8A5AAB;
+            color: #e2c4ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .step-text h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+        .step-text p {
+            font-size: 12px;
+            color: #9f9fc5;
+            line-height: 1.5;
+        }
+        .highlight {
+            color: #d6b4fc;
+            font-weight: 600;
+        }
+        .preview-box {
+            background: rgba(138, 90, 171, 0.1);
+            border: 1px dashed rgba(138, 90, 171, 0.4);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 16px;
+            text-align: center;
+            font-size: 12px;
+            color: #c499f8;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #6d6d90;
+        }
+        .footer a { color: #8A5AAB; text-decoration: none; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🎬 Filtro de Resolução Stremio</h1>
-            <p>Selecione a resolução desejada e gerencie as fontes upstream do seu plugin.</p>
+    <div class="wrapper">
+        <div class="hero">
+            <h1 class="hero-title">🎬 Stremio Resolution Filter</h1>
+            <p class="hero-subtitle">Filtre os links de vídeo por qualidade e consolide múltiplas fontes de torrents diretamente na sua tela do Stremio.</p>
+            <div class="badges">
+                <span class="badge">⚡ 1º Lugar no Menu</span>
+                <span class="badge">☁️ Hospedado na Nuvem</span>
+                <span class="badge">📺 TV, Mobile e Desktop</span>
+            </div>
         </div>
 
-        <form id="configForm">
-            <div class="form-group">
-                <label for="resolution">Menu Dropdown por Resolução</label>
-                <select id="resolution" name="resolution">
-                    <option value="all">Todas as Resoluções (All)</option>
-                    <option value="4k">Apenas 4K (2160p)</option>
-                    <option value="1080p">Apenas 1080p (Full HD)</option>
-                    <option value="720p">Apenas 720p (HD)</option>
-                    <option value="480p">Apenas 480p (SD)</option>
-                    <option value="1080p_above">1080p e 4K (Full HD & 4K)</option>
-                    <option value="720p_above">720p ou superior (720p, 1080p, 4K)</option>
-                </select>
-                <div class="hint">Filtra e exibe os links no topo da lista no Stremio pela resolução escolhida.</div>
+        <div class="grid">
+            <!-- Coluna 1: Painel de Configuração -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⚙️</div>
+                    <div class="card-title">Configurar Addon</div>
+                </div>
+
+                <form id="configForm">
+                    <div class="form-group">
+                        <label for="resolution">Filtro de Resolução</label>
+                        <select id="resolution" name="resolution">
+                            <option value="all">Todas as Resoluções (All)</option>
+                            <option value="4k">Apenas 4K (2160p)</option>
+                            <option value="1080p" selected>Apenas 1080p (Full HD)</option>
+                            <option value="720p">Apenas 720p (HD)</option>
+                            <option value="480p">Apenas 480p (SD)</option>
+                            <option value="1080p_above">1080p e 4K (Full HD & 4K)</option>
+                            <option value="720p_above">720p ou superior (720p, 1080p, 4K)</option>
+                        </select>
+                        <div class="hint">Escolha quais resoluções deseja visualizar no Stremio.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="upstreamUrls">Addons de Origem (Upstream)</label>
+                        <textarea id="upstreamUrls" name="upstreamUrls">https://torrentio.strem.fun, https://torrentio.strem.fun/lite, https://torrentio.strem.fun/brazuca</textarea>
+                        <div class="hint">URLs dos addons que fornecem as fontes (separadas por vírgula).</div>
+                    </div>
+
+                    <button type="button" id="installBtn" class="btn-primary">🚀 INSTALAR NO STREMIO</button>
+                    <button type="button" id="copyBtn" class="btn-secondary">📋 Copiar Link do Manifesto (para Smart TV)</button>
+                </form>
             </div>
 
-            <div class="form-group">
-                <label for="upstreamUrls">URLs dos Addons Upstream (separadas por vírgula)</label>
-                <textarea id="upstreamUrls" name="upstreamUrls">https://torrentio.strem.fun, https://torrentio.strem.fun/lite, https://torrentio.strem.fun/brazuca</textarea>
-                <div class="hint">Insira as URLs dos addons de onde o plugin irá buscar as fontes.</div>
-            </div>
+            <!-- Coluna 2: Guia de Uso Visual -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📖</div>
+                    <div class="card-title">Como Usar no Stremio</div>
+                </div>
 
-            <button type="button" id="installBtn">INSTALAR NO STREMIO</button>
-        </form>
+                <div class="step-list">
+                    <div class="step-item">
+                        <div class="step-number">1</div>
+                        <div class="step-text">
+                            <h4>Escolha sua Resolução</h4>
+                            <p>No painel ao lado, selecione o filtro desejado (ex: <span class="highlight">Apenas 1080p</span> ou <span class="highlight">1080p e 4K</span>).</p>
+                        </div>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-number">2</div>
+                        <div class="step-text">
+                            <h4>Clique em Instalar</h4>
+                            <p>Clique no botão <span class="highlight">INSTALAR NO STREMIO</span>. Seu aplicativo do Stremio abrirá solicitando confirmação.</p>
+                        </div>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-number">3</div>
+                        <div class="step-text">
+                            <h4>Abra Qualquer Filme ou Série</h4>
+                            <p>No Stremio, selecione a mídia que deseja assistir para carregar as opções de reprodução.</p>
+                        </div>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-number">4</div>
+                        <div class="step-text">
+                            <h4>Veja o Filtro no Topo (⚡)</h4>
+                            <p>No menu suspenso do canto superior direito do Stremio, o seu filtro aparecerá em <span class="highlight">1º lugar com o raio ⚡</span> exibindo apenas os vídeos filtrados!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="preview-box">
+                    💡 <strong>Dica para Smart TV:</strong> Clique em "Copiar Link do Manifesto", abra a aba Addons da sua TV e cole a URL salva!
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Stremio Resolution Filter Addon • Código aberto no <a href="https://github.com/danielgoqueiroz/stremio-filter-by-resolution" target="_blank">GitHub</a>
+        </div>
     </div>
 
     <script>
-        document.getElementById('installBtn').onclick = () => {
+        function getManifestUrl() {
             const form = document.getElementById('configForm');
             const resolution = form.resolution.value;
             const upstreamUrls = form.upstreamUrls.value;
@@ -383,9 +605,26 @@ const configureHTML = `<!DOCTYPE html>
             };
 
             const configPath = encodeURIComponent(JSON.stringify(config));
-            const installUrl = 'stremio://' + window.location.host + '/' + configPath + '/manifest.json';
-            
+            return window.location.origin + '/' + configPath + '/manifest.json';
+        }
+
+        document.getElementById('installBtn').onclick = () => {
+            const manifestUrl = getManifestUrl();
+            const installUrl = manifestUrl.replace('https://', 'stremio://').replace('http://', 'stremio://');
             window.location.href = installUrl;
+        };
+
+        document.getElementById('copyBtn').onclick = () => {
+            const manifestUrl = getManifestUrl();
+            navigator.clipboard.writeText(manifestUrl).then(() => {
+                const copyBtn = document.getElementById('copyBtn');
+                copyBtn.innerText = '✅ Link do Manifesto Copiado!';
+                setTimeout(() => {
+                    copyBtn.innerText = '📋 Copiar Link do Manifesto (para Smart TV)';
+                }, 3000);
+            }).catch(err => {
+                alert('URL do Manifesto: ' + manifestUrl);
+            });
         };
     </script>
 </body>
