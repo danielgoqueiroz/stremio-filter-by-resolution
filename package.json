@@ -1,0 +1,24 @@
+{
+  "name": "stremio-filter-by-resolution",
+  "version": "1.0.0",
+  "description": "Plugin para Stremio que filtra streams de vídeo por resolução (4K, 1080p, 720p, 480p).",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "stremio-addon-sdk": "^1.6.3"
+  },
+  "keywords": [
+    "stremio",
+    "stremio-addon",
+    "resolution-filter",
+    "4k",
+    "1080p",
+    "torrentio"
+  ],
+  "author": "",
+  "license": "MIT"
+}
