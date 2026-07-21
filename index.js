@@ -2,11 +2,11 @@ import express from "express";
 import sdk from "stremio-addon-sdk";
 const { addonBuilder, getRouter } = sdk;
 
-// Manifesto do Addon para Stremio
+// Manifesto base do Addon para Stremio
 const manifest = {
     id: "community.resolution-filter",
     version: "1.0.0",
-    name: "Filtro de Resolução (Resolution Filter)",
+    name: "Filtro de Resolução",
     description: "Filtra streams do Stremio por resoluções específicas (4K, 1080p, 720p, 480p) e consolida múltiplas fontes dinâmicas.",
     resources: ["stream"],
     types: ["movie", "series"],
@@ -51,6 +51,35 @@ const DEFAULT_UPSTREAMS = [
 ];
 
 /**
+ * Obtém a descrição amigável da resolução selecionada para exibir no menu dropdown do Stremio.
+ */
+function getResolutionLabel(resolutionKey) {
+    if (!resolutionKey) return "Todas as Resoluções";
+    const res = resolutionKey.toLowerCase();
+
+    if (res.includes("4k") && !res.includes("1080p") && !res.includes("720p") && !res.includes("all") && !res.includes("todas")) {
+        return "Apenas 4K (2160p)";
+    }
+    if (res.includes("1080p") && !res.includes("4k") && !res.includes("720p") && !res.includes("all") && !res.includes("todas")) {
+        return "Apenas 1080p (Full HD)";
+    }
+    if (res.includes("720p") && !res.includes("1080p") && !res.includes("4k") && !res.includes("all") && !res.includes("todas")) {
+        return "Apenas 720p (HD)";
+    }
+    if (res.includes("480p")) {
+        return "Apenas 480p (SD)";
+    }
+    if (res.includes("1080p_above") || res.includes("full hd & 4k") || res.includes("full hd + 4k")) {
+        return "1080p e 4K";
+    }
+    if (res.includes("720p_above") || res.includes("720p ou superior")) {
+        return "720p ou superior";
+    }
+
+    return "Todas as Resoluções";
+}
+
+/**
  * Detecta a resolução de um stream analisando nome, título, descrição e qualidade.
  */
 function detectResolution(stream) {
@@ -83,14 +112,18 @@ function detectResolution(stream) {
 
 /**
  * Extrai e formata o nome da fonte para o Stremio agrupar no menu dropdown superior.
+ * Inclui a descrição da resolução selecionada para exibição clara no menu do Stremio.
  */
-function formatStreamName(stream, resolution) {
+function formatStreamName(stream, resolution, config) {
     const rawName = (stream.name || "").trim();
     const parts = rawName.split("\n");
     const sourceName = parts[0] || "Torrentio";
     const displayRes = resolution !== "unknown" ? resolution.toUpperCase() : (parts[1] || "");
 
-    return displayRes ? `${sourceName}\n${displayRes}` : sourceName;
+    const resLabel = getResolutionLabel(config?.resolution);
+    const headerName = `${sourceName} [${resLabel}]`;
+
+    return displayRes ? `${headerName}\n${displayRes}` : headerName;
 }
 
 /**
@@ -204,7 +237,7 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
 
         const formattedStream = {
             ...stream,
-            name: formatStreamName(stream, resolution)
+            name: formatStreamName(stream, resolution, config)
         };
 
         filteredStreams.push(formattedStream);
@@ -343,6 +376,27 @@ const configureHTML = `<!DOCTYPE html>
 // Cria a aplicação Express
 const app = express();
 
+// Rota customizada para entregar o manifesto dinâmico com a descrição da resolução no nome do addon
+app.get("/:config/manifest.json", (req, res, next) => {
+    try {
+        const config = JSON.parse(req.params.config);
+        const resLabel = getResolutionLabel(config.resolution);
+        const dynamicManifest = {
+            ...manifest,
+            name: `Filtro (${resLabel})`
+        };
+        // Remove flags de configuração do manifesto para o Stremio entender como já configurado
+        if (dynamicManifest.behaviorHints) {
+            delete dynamicManifest.behaviorHints.configurable;
+            delete dynamicManifest.behaviorHints.configurationRequired;
+        }
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        return res.json(dynamicManifest);
+    } catch (e) {
+        return next();
+    }
+});
+
 // Serve a página de configuração customizada no / e no /configure
 app.get(["/", "/configure"], (req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -352,7 +406,7 @@ app.get(["/", "/configure"], (req, res) => {
 // Conecta as rotas padrão do Stremio Addon SDK (/manifest.json, /stream/..., etc.)
 app.use(getRouter(builder.getInterface()));
 
-// Porta dinâmica (exigida por hospedagens em nuvem como Beamup, Render, Vercel)
+// Porta dinâmica (exigida por hospedagens em nuvem como Vercel, Beamup, Render)
 const PORT = process.env.PORT || process.env.PORT_ADDON || 7000;
 
 app.listen(PORT, () => {
