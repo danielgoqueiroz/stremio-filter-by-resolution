@@ -6,7 +6,7 @@ const { addonBuilder, getRouter } = sdk;
 const manifest = {
     id: "community.resolution-filter",
     version: "1.0.0",
-    name: "Filtro de Resolução",
+    name: "⚡ Filtro de Resolução",
     description: "Filtra streams do Stremio por resoluções específicas (4K, 1080p, 720p, 480p) e consolida múltiplas fontes dinâmicas.",
     resources: ["stream"],
     types: ["movie", "series"],
@@ -49,6 +49,17 @@ const DEFAULT_UPSTREAMS = [
     "https://torrentio.strem.fun/lite",
     "https://torrentio.strem.fun/brazuca"
 ];
+
+/**
+ * Ordem de prioridade para exibição dos streams no Stremio (4K no topo, depois 1080p, 720p, 480p)
+ */
+const RESOLUTION_PRIORITY = {
+    "4k": 1,
+    "1080p": 2,
+    "720p": 3,
+    "480p": 4,
+    "unknown": 5
+};
 
 /**
  * Obtém o selo conciso da resolução selecionada para exibição limpa no Stremio.
@@ -111,7 +122,7 @@ function detectResolution(stream) {
 }
 
 /**
- * Extrai e formata o nome da fonte para o Stremio agrupar no menu dropdown superior.
+ * Extrai e formata o nome da fonte para o Stremio agrupar no menu dropdown superior no topo da lista.
  */
 function formatStreamName(stream, resolution, config) {
     const rawName = (stream.name || "").trim();
@@ -120,7 +131,8 @@ function formatStreamName(stream, resolution, config) {
     const displayRes = resolution !== "unknown" ? resolution.toUpperCase() : (parts[1] || "");
 
     const label = getResolutionLabel(config?.resolution);
-    const headerName = label !== "Todas" ? `${sourceName} [${label}]` : sourceName;
+    // Prefixo ⚡ garante prioridade no topo do dropdown do Stremio
+    const headerName = label !== "Todas" ? `⚡ ${sourceName} [${label}]` : `⚡ ${sourceName}`;
 
     return displayRes ? `${headerName}\n${displayRes}` : headerName;
 }
@@ -193,7 +205,6 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
     const upstreamUrls = getUpstreamUrls(config);
     console.log(`[Stream Request] Consultando ${upstreamUrls.length} fontes upstream simultaneamente:`, upstreamUrls);
 
-    // Consulta concorrente com timeout de 4s para responder rapidamente na nuvem/serverless
     const fetchPromises = upstreamUrls.map(async (baseUrl) => {
         const streamUrl = `${baseUrl}/stream/${type}/${id}.json`;
         try {
@@ -235,7 +246,6 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
             continue;
         }
 
-        // Preserva 100% das propriedades originais do stream (url, infoHash, fileIdx, behaviorHints, etc.)
         const formattedStream = {
             ...stream,
             name: formatStreamName(stream, resolution, config)
@@ -244,7 +254,14 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
         filteredStreams.push(formattedStream);
     }
 
-    console.log(`[Stream Request] Streams exibidos após filtro: ${filteredStreams.length}`);
+    // Ordena os streams para que as resoluções mais altas apareçam em primeiro lugar na lista do Stremio
+    filteredStreams.sort((a, b) => {
+        const resA = detectResolution(a);
+        const resB = detectResolution(b);
+        return (RESOLUTION_PRIORITY[resA] || 99) - (RESOLUTION_PRIORITY[resB] || 99);
+    });
+
+    console.log(`[Stream Request] Streams ordenados e exibidos em 1º lugar após filtro: ${filteredStreams.length}`);
 
     return { streams: filteredStreams };
 });
@@ -341,7 +358,7 @@ const configureHTML = `<!DOCTYPE html>
                     <option value="1080p_above">1080p e 4K (Full HD & 4K)</option>
                     <option value="720p_above">720p ou superior (720p, 1080p, 4K)</option>
                 </select>
-                <div class="hint">Filtra os links exibidos no Stremio pela resolução escolhida.</div>
+                <div class="hint">Filtra e exibe os links no topo da lista no Stremio pela resolução escolhida.</div>
             </div>
 
             <div class="form-group">
@@ -377,7 +394,7 @@ const configureHTML = `<!DOCTYPE html>
 // Cria a aplicação Express
 const app = express();
 
-// Middleware Global de CORS (Garante Access-Control-Allow-Origin: * em todas as rotas e preflights)
+// Middleware Global de CORS
 app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Headers", "*");
@@ -388,14 +405,14 @@ app.use((req, res, next) => {
     next();
 });
 
-// Rota customizada para entregar o manifesto dinâmico com a descrição da resolução no nome do addon
+// Rota customizada para entregar o manifesto dinâmico com prioridade ⚡ e descrição no nome
 app.get("/:config/manifest.json", (req, res, next) => {
     try {
         const config = JSON.parse(req.params.config);
         const resLabel = getResolutionLabel(config.resolution);
         const dynamicManifest = {
             ...manifest,
-            name: `Filtro (${resLabel})`
+            name: `⚡ Filtro (${resLabel})`
         };
         if (dynamicManifest.behaviorHints) {
             delete dynamicManifest.behaviorHints.configurable;
