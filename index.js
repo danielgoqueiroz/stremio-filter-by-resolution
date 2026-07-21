@@ -51,32 +51,32 @@ const DEFAULT_UPSTREAMS = [
 ];
 
 /**
- * Obtém a descrição amigável da resolução selecionada para exibir no menu dropdown do Stremio.
+ * Obtém o selo conciso da resolução selecionada para exibição limpa no Stremio.
  */
 function getResolutionLabel(resolutionKey) {
-    if (!resolutionKey) return "Todas as Resoluções";
+    if (!resolutionKey) return "Todas";
     const res = resolutionKey.toLowerCase();
 
     if (res.includes("4k") && !res.includes("1080p") && !res.includes("720p") && !res.includes("all") && !res.includes("todas")) {
-        return "Apenas 4K (2160p)";
+        return "4K Apenas";
     }
     if (res.includes("1080p") && !res.includes("4k") && !res.includes("720p") && !res.includes("all") && !res.includes("todas")) {
-        return "Apenas 1080p (Full HD)";
+        return "1080p Apenas";
     }
     if (res.includes("720p") && !res.includes("1080p") && !res.includes("4k") && !res.includes("all") && !res.includes("todas")) {
-        return "Apenas 720p (HD)";
+        return "720p Apenas";
     }
     if (res.includes("480p")) {
-        return "Apenas 480p (SD)";
+        return "480p Apenas";
     }
     if (res.includes("1080p_above") || res.includes("full hd & 4k") || res.includes("full hd + 4k")) {
-        return "1080p e 4K";
+        return "1080p + 4K";
     }
     if (res.includes("720p_above") || res.includes("720p ou superior")) {
-        return "720p ou superior";
+        return "720p+";
     }
 
-    return "Todas as Resoluções";
+    return "Todas";
 }
 
 /**
@@ -112,7 +112,6 @@ function detectResolution(stream) {
 
 /**
  * Extrai e formata o nome da fonte para o Stremio agrupar no menu dropdown superior.
- * Inclui a descrição da resolução selecionada para exibição clara no menu do Stremio.
  */
 function formatStreamName(stream, resolution, config) {
     const rawName = (stream.name || "").trim();
@@ -120,8 +119,8 @@ function formatStreamName(stream, resolution, config) {
     const sourceName = parts[0] || "Torrentio";
     const displayRes = resolution !== "unknown" ? resolution.toUpperCase() : (parts[1] || "");
 
-    const resLabel = getResolutionLabel(config?.resolution);
-    const headerName = `${sourceName} [${resLabel}]`;
+    const label = getResolutionLabel(config?.resolution);
+    const headerName = label !== "Todas" ? `${sourceName} [${label}]` : sourceName;
 
     return displayRes ? `${headerName}\n${displayRes}` : headerName;
 }
@@ -194,11 +193,12 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
     const upstreamUrls = getUpstreamUrls(config);
     console.log(`[Stream Request] Consultando ${upstreamUrls.length} fontes upstream simultaneamente:`, upstreamUrls);
 
+    // Consulta concorrente com timeout de 4s para responder rapidamente na nuvem/serverless
     const fetchPromises = upstreamUrls.map(async (baseUrl) => {
         const streamUrl = `${baseUrl}/stream/${type}/${id}.json`;
         try {
             const response = await fetch(streamUrl, {
-                signal: AbortSignal.timeout(6000)
+                signal: AbortSignal.timeout(4000)
             });
             if (response.ok) {
                 const data = await response.json();
@@ -221,7 +221,7 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
         }
     }
 
-    console.log(`[Stream Request] Total de streams agregados de todas as fontes: ${aggregatedStreams.length}`);
+    console.log(`[Stream Request] Total de streams agregados: ${aggregatedStreams.length}`);
 
     if (aggregatedStreams.length === 0) {
         return { streams: [] };
@@ -235,6 +235,7 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
             continue;
         }
 
+        // Preserva 100% das propriedades originais do stream (url, infoHash, fileIdx, behaviorHints, etc.)
         const formattedStream = {
             ...stream,
             name: formatStreamName(stream, resolution, config)
@@ -243,7 +244,7 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
         filteredStreams.push(formattedStream);
     }
 
-    console.log(`[Stream Request] Streams exibidos após filtro de resolução: ${filteredStreams.length}`);
+    console.log(`[Stream Request] Streams exibidos após filtro: ${filteredStreams.length}`);
 
     return { streams: filteredStreams };
 });
@@ -376,6 +377,17 @@ const configureHTML = `<!DOCTYPE html>
 // Cria a aplicação Express
 const app = express();
 
+// Middleware Global de CORS (Garante Access-Control-Allow-Origin: * em todas as rotas e preflights)
+app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Headers", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 // Rota customizada para entregar o manifesto dinâmico com a descrição da resolução no nome do addon
 app.get("/:config/manifest.json", (req, res, next) => {
     try {
@@ -385,7 +397,6 @@ app.get("/:config/manifest.json", (req, res, next) => {
             ...manifest,
             name: `Filtro (${resLabel})`
         };
-        // Remove flags de configuração do manifesto para o Stremio entender como já configurado
         if (dynamicManifest.behaviorHints) {
             delete dynamicManifest.behaviorHints.configurable;
             delete dynamicManifest.behaviorHints.configurationRequired;
