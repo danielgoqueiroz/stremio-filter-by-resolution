@@ -6,42 +6,39 @@ Compatível com o **menu suspenso (dropdown)** nativo do Stremio para filtro de 
 
 ---
 
-## ☁️ Como Fazer Deploy Gratuito no Beamup (Sem Precisar do PC Ligado)
+## ☁️ Como Fazer Deploy Gratuito na Nuvem (Vercel ou Render)
 
-O **Beamup** é o serviço oficial de hospedagem na nuvem **100% gratuito** do Stremio. Ao publicar seu plugin no Beamup, ele roda 24/7 na nuvem e funciona na sua Smart TV, celular e PC sem você precisar rodar nenhum comando no computador.
+Como o Beamup se encontra instável/fora do ar, as duas melhores alternativas **100% gratuitas, rápidas e sem queda** para hospedar addons do Stremio são o **Vercel** e o **Render**.
 
-### Passo a Passo de Publicação no Beamup:
+### Opção 1: Deploy na Vercel (Recomendado - Instantâneo)
 
-#### 1. Criar um Repositório no GitHub
-Se você ainda não enviou o projeto para o GitHub:
-1. Acesse [github.com/new](https://github.com/new) e crie um repositório chamado `stremio-filter-by-resolution`.
-2. No terminal da pasta do projeto, execute os comandos:
-   ```bash
-   git init
-   git add .
-   git commit -m "Addon de Filtro de Resolução Stremio"
-   git branch -M main
-   git remote add origin https://github.com/SEU_USUARIO/stremio-filter-by-resolution.git
-   git push -u origin main
-   ```
+A Vercel oferece hospedagem serverless gratuita e com tempo de atividade impecável.
 
-#### 2. Conectar ao Beamup
-1. Acesse o site do Beamup: **[https://beamup.strem.fun](https://beamup.strem.fun)**
-2. Faça login com a sua conta do **GitHub**.
-3. Autorize o Beamup e selecione o repositório `stremio-filter-by-resolution`.
-4. Clique no botão **Deploy**.
-
-#### 3. Instalar no Stremio
-1. O Beamup gerará um link permanente de hospedagem na nuvem, no formato:
+1. Acesse **[vercel.com](https://vercel.com/)** e faça login/cadastro gratuito com sua conta do **GitHub**.
+2. Clique em **"Add New..."** -> **"Project"**.
+3. Na lista de repositórios do seu GitHub, selecione o repositório **`stremio-filter-by-resolution`**.
+4. Clique em **Deploy** (não precisa alterar nenhuma configuração de build).
+5. Em menos de 1 minuto, a Vercel gerará a sua URL pública permanente no formato:
    ```text
-   https://stremio-filter-by-resolution.beamup.dev/manifest.json
+   https://stremio-filter-by-resolution-xxx.vercel.app/configure
    ```
-2. Acesse a página de configuração do seu addon publicado:
+6. Acesse essa URL no seu navegador, escolha a resolução no **Menu Dropdown** e clique em **INSTALAR NO STREMIO**.
+
+---
+
+### Opção 2: Deploy no Render.com (Alternativa Gratuita)
+
+1. Acesse **[render.com](https://render.com/)** e faça login gratuito com o GitHub.
+2. Clique em **New +** -> **Web Service**.
+3. Conecte o repositório **`stremio-filter-by-resolution`**.
+4. Defina:
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+5. Clique em **Create Web Service**.
+6. Após a inicialização, você receberá a URL pública no formato:
    ```text
-   https://stremio-filter-by-resolution.beamup.dev/configure
+   https://stremio-filter-by-resolution.onrender.com/configure
    ```
-3. Escolha a resolução desejada no **Menu Dropdown**, ajuste as fontes e clique em **INSTALAR NO STREMIO**.
-4. **Pronto!** Seu plugin funcionará para sempre em todos os seus dispositivos.
 
 ---
 
@@ -58,21 +55,16 @@ Se você ainda não enviou o projeto para o GitHub:
 - **URLs dos Addons Upstream Editáveis**: As fontes upstream (ex: Torrentio, Torrentio Lite, Torrentio Brazuca) aparecem preenchidas na página de configuração, podendo ser personalizadas.
 - **Carregamento Dinâmico de Múltiplas Fontes**: Consulta múltiplos addons simultaneamente em paralelo (`Promise.allSettled`).
 - **Integração com o Menu Dropdown de Provedores do Stremio**: Preserva o nome do provedor no campo `stream.name`, alimentando o seletor nativo do aplicativo Stremio.
-- **Pronto para Nuvem (Beamup/Render/Vercel)**: Configurado com porta dinâmica (`process.env.PORT`) e scripts de entrada `server.js`.
+- **Pronto para Nuvem (Vercel/Render/Beamup)**: Arquivos `vercel.json`, `api/index.js` e `server.js` prontos para deploy automático via GitHub.
 
 ---
 
 ## 🛠️ Execução Local para Testes (Opcional)
 
-Se quiser testar o projeto no seu computador antes de enviar ao Beamup:
+Se quiser testar o projeto no seu computador:
 
-### 1. Instalar as Dependências
 ```bash
 npm install
-```
-
-### 2. Iniciar o Servidor Local
-```bash
 npm start
 ```
 
