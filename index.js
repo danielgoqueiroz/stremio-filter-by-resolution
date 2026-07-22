@@ -32,7 +32,7 @@ const manifest = {
             key: "upstreamUrls",
             type: "text",
             title: "URLs dos Addons Upstream (separadas por vírgula)",
-            default: "https://torrentio.strem.fun, https://torrentio.strem.fun/lite, https://torrentio.strem.fun/brazuca"
+            default: "https://torrentio.strem.fun, https://thepiratebay-plus.strem.fun, https://torrentio.strem.fun/lite, https://torrentio.strem.fun/brazuca, https://shluflix.elfhosted.com"
         }
     ],
     behaviorHints: {
@@ -46,8 +46,10 @@ const manifest = {
  */
 const DEFAULT_UPSTREAMS = [
     "https://torrentio.strem.fun",
+    "https://thepiratebay-plus.strem.fun",
     "https://torrentio.strem.fun/lite",
-    "https://torrentio.strem.fun/brazuca"
+    "https://torrentio.strem.fun/brazuca",
+    "https://shluflix.elfhosted.com"
 ];
 
 /**
@@ -616,7 +618,7 @@ const configureHTML = `<!DOCTYPE html>
 
                     <div class="form-group">
                         <label for="upstreamUrls">Addons de Origem (Upstream)</label>
-                        <textarea id="upstreamUrls" name="upstreamUrls">https://torrentio.strem.fun, https://torrentio.strem.fun/lite, https://torrentio.strem.fun/brazuca</textarea>
+                        <textarea id="upstreamUrls" name="upstreamUrls">https://torrentio.strem.fun, https://thepiratebay-plus.strem.fun, https://torrentio.strem.fun/lite, https://torrentio.strem.fun/brazuca, https://shluflix.elfhosted.com</textarea>
                         <div class="hint">URLs dos addons que fornecem as fontes (separadas por vírgula).</div>
                     </div>
 
