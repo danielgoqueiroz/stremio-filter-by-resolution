@@ -5,9 +5,9 @@ const { addonBuilder, getRouter } = sdk;
 // Manifesto base do Addon para Stremio
 const manifest = {
     id: "community.resolution-filter",
-    version: "1.0.0",
+    version: "1.1.0",
     name: "! Filtro de Resolução",
-    description: "Filtra streams do Stremio por resoluções específicas (4K, 1080p, 720p, 480p) e consolida múltiplas fontes dinâmicas.",
+    description: "Filtra streams do Stremio por resoluções específicas (4K, 1080p, 720p, 480p), consolidando fontes e indicando legendas PT-BR/PT-PT (LEG🇧🇷/LEG🇵🇹) e dublado (🔊).",
     resources: ["stream"],
     types: ["movie", "series"],
     catalogs: [],
@@ -124,16 +124,44 @@ function detectResolution(stream) {
 /**
  * Extrai e formata o nome da fonte para o Stremio agrupar no 1º LUGAR da lista do menu dropdown superior.
  */
-function formatStreamName(stream, resolution, config) {
+function formatStreamName(stream, resolution, hasPtBr, config) {
     const rawName = (stream.name || "").trim();
-    const parts = rawName.split("\n");
-    const displayRes = resolution !== "unknown" ? resolution.toUpperCase() : (parts[1] || "");
+    // Pega o provedor da primeira linha (ex: Torrentio)
+    const providerLine = rawName.split("\n")[0] || "Stream";
+    const cleanProvider = providerLine.replace(/!/g, "").trim();
+
+    const displayRes = resolution !== "unknown" ? resolution.toUpperCase() : "";
+
+    // Analisa se o próprio vídeo está dublado em Português
+    const textToAnalyze = [
+        stream.name,
+        stream.title,
+        stream.description,
+        stream.quality
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    // Palavras-chave que sinalizam dublagem em PT ou áudio original em PT
+    const isDubbed = /\b(dublado|dub\b|dual|multi|brazuca)\b/i.test(textToAnalyze);
+
+    // Monta os indicadores visuais
+    const indicators = [];
+    if (isDubbed) {
+        indicators.push("🔊");
+    }
+    if (hasPtBr) {
+        indicators.push("LEG🇧🇷");
+    }
+    if (indicators.length === 0) {
+        indicators.push("❌");
+    }
 
     const label = getResolutionLabel(config?.resolution);
     // Prefixo '!' (ASCII 33) garante que seja ordenado em 1º lugar absoluto no menu do Stremio
-    const headerName = `! Filtro (${label})`;
+    const headerName = `! [${indicators.join(" ")}] (${label})`;
 
-    return displayRes ? `${headerName}\n${displayRes}` : headerName;
+    return displayRes 
+        ? `${headerName}\n${cleanProvider} - ${displayRes}` 
+        : `${headerName}\n${cleanProvider}`;
 }
 
 /**
@@ -201,6 +229,24 @@ const builder = new addonBuilder(manifest);
 builder.defineStreamHandler(async ({ type, id, config }) => {
     console.log(`[Stream Request] Type: ${type}, ID: ${id}, Config:`, config);
 
+    // Consultamos o OpenSubtitles em paralelo para evitar lentidão
+    const subUrl = `https://opensubtitles-v3.strem.io/subtitles/${type}/${encodeURIComponent(id)}.json`;
+    const fetchSubsPromise = fetch(subUrl, { signal: AbortSignal.timeout(3000) })
+        .then(async (res) => {
+            if (res.ok) {
+                const data = await res.json();
+                if (data && Array.isArray(data.subtitles)) {
+                    const hasPtBr = data.subtitles.some(s => s.lang === 'pob');
+                    return { hasPtBr };
+                }
+            }
+            return { hasPtBr: false };
+        })
+        .catch((err) => {
+            console.error(`[Subtitle Check] Falha ao verificar OpenSubtitles para ${id}:`, err.message);
+            return { hasPtBr: false };
+        });
+
     const upstreamUrls = getUpstreamUrls(config);
     console.log(`[Stream Request] Consultando ${upstreamUrls.length} fontes upstream simultaneamente:`, upstreamUrls);
 
@@ -222,7 +268,10 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
         return [];
     });
 
-    const results = await Promise.allSettled(fetchPromises);
+    const [results, subInfo] = await Promise.all([
+        Promise.allSettled(fetchPromises),
+        fetchSubsPromise
+    ]);
 
     let aggregatedStreams = [];
     for (const res of results) {
@@ -247,7 +296,7 @@ builder.defineStreamHandler(async ({ type, id, config }) => {
 
         const formattedStream = {
             ...stream,
-            name: formatStreamName(stream, resolution, config)
+            name: formatStreamName(stream, resolution, subInfo.hasPtBr, config)
         };
 
         filteredStreams.push(formattedStream);
@@ -432,6 +481,43 @@ const configureHTML = `<!DOCTYPE html>
         }
         .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
         
+        .legend-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 16px;
+        }
+        .legend-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 24px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+        }
+        .legend-icon {
+            font-size: 18px;
+            min-width: 32px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 4px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .legend-text { color: #d1ccdc; }
+        .legend-text strong { color: #fff; }
+
         .step-list {
             display: flex;
             flex-direction: column;
@@ -536,6 +622,26 @@ const configureHTML = `<!DOCTYPE html>
 
                     <button type="button" id="installBtn" class="btn-primary">🚀 INSTALAR NO STREMIO</button>
                     <button type="button" id="copyBtn" class="btn-secondary">📋 Copiar Link do Manifesto (para Smart TV)</button>
+                    
+                    <div class="legend-title">Legenda de Ícones no Stremio:</div>
+                    <div class="legend-list">
+                        <div class="legend-item">
+                            <span class="legend-icon">🔊 LEG🇧🇷</span>
+                            <span class="legend-text"><strong>Áudio Dublado</strong> e <strong>Legenda PT-BR</strong> disponíveis</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-icon">🔊</span>
+                            <span class="legend-text"><strong>Áudio Dublado</strong> em Português</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-icon">LEG🇧🇷</span>
+                            <span class="legend-text"><strong>Legenda PT-BR</strong> disponível no OpenSubtitles</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-icon">❌</span>
+                            <span class="legend-text">Nenhuma opção em Português encontrada</span>
+                        </div>
+                    </div>
                 </form>
             </div>
 
